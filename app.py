@@ -11,48 +11,10 @@ logger = logging.getLogger(__name__)
 
 @app.route('/')
 def index():
-    logger.info("JEREMY: index info")
-    logger.warning("JEREMY: warning: index info")
-    print('Request for index page received')
-    return render_template('index.html')
-
-@app.route('/favicon.ico')
-def favicon():
-    logger.info("JEREMY: favicon info")
-    logger.warning("JEREMY: warning: favicon info")
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
-@app.route('/hello', methods=['POST'])
-def hello():
-    print('hello')
-    print(logger)
-    logger.info("JEREMY: hello info")
-    logger.warning("JEREMY: warning: hello info")
-
-    name = request.form.get('name')
-
-    if name:
-        print('Request for hello page received with name=%s' % name)
-        return render_template('hello.html', name = name)
-    else:
-        print('Request for hello page received with no name or blank name -- redirecting')
-        properties = {'custom_dimensions': {'problemId': 'No Name', 'key_2': 'value_2'}}
-        # properties = {'problem_id': 'No Name problem',
-            # 'problemId': 'No name problem 2'}
-        print(logger)
-        print("JEREMYVOSS: before error")
-        logger.error(Exception("JEREMY: EXCEPTION: NO NAME pre"))
-        logger.setLevel(logging.ERROR)
-        print(logger)
-        print("JEREMYVOSS: after error")
-        logger.error(Exception("JEREMY: ERROR: NO NAME post"))
-        logger.setLevel(logging.INFO)
-        logger.exception("JEREMY: EXCEPTION: NO NAME")
-        return redirect(url_for('index'))
+    return 'Test app'
 
 
-# Logs
+# Logs -> traces
 
 @app.route('/logs/info')
 def logs_info():
@@ -112,10 +74,12 @@ def logs():
     logs_warning()
     logs_error()
     logs_exception()
+    # for endpoint in ('logs_info', 'logs_warning', 'logs_error', 'logs_exception'):
+    #     requests.get(url_for(endpoint))
     return "Test app logs"
 
 
-# Traces
+# Traces -> requests
 
 @app.route('/traces/requests')
 def traces_requests():
@@ -134,9 +98,11 @@ def traces_dependencies():
 
 @app.route('/traces')
 def traces():
-    traces_requests()
-    traces_exception_requests()
-    traces_dependencies()
+    # traces_requests()
+    # traces_exception_requests()
+    # traces_dependencies()
+    for endpoint in ('traces_requests', 'traces_exception_requests', 'traces_dependencies'):
+        requests.get(url_for(endpoint))
     return 'Test app traces'
 
 # Metrics
