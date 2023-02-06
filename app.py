@@ -102,7 +102,10 @@ def traces():
     # traces_exception_requests()
     # traces_dependencies()
     for endpoint in ('traces_requests', 'traces_exception_requests', 'traces_dependencies'):
-        requests.get(url_for(endpoint))
+        try:
+            requests.get(url_for(endpoint))
+        except:
+            pass
     return 'Test app traces'
 
 # Metrics
