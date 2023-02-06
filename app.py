@@ -56,22 +56,30 @@ def hello():
 
 @app.route('/logs/info')
 def logs_info():
-    logger.info('Test app info log')
+    message = 'Test app info log'
+    logger.info(message)
+    return message
 
 
 @app.route('/logs/warning')
 def logs_warning():
-    logger.warning('Test app warning log')
+    message = 'Test app warning log'
+    logger.warning(message)
+    return message
 
 
 @app.route('/logs/error')
 def logs_error():
-    logger.error('Test app error log')
+    message = 'Test app error log'
+    logger.error(message)
+    return message
 
 
 @app.route('/logs/exception')
 def logs_exception():
-    logger.exception('Test app exception log')
+    message = 'Test app exception log'
+    logger.exception(message)
+    return message
 
 
 # @app.route('/logs/correlated_info')
@@ -104,6 +112,7 @@ def logs():
     logs_warning()
     logs_error()
     logs_exception()
+    return "Test app logs"
 
 
 # Traces
@@ -128,6 +137,7 @@ def traces():
     traces_requests()
     traces_exception_requests()
     traces_dependencies()
+    return 'Test app traces'
 
 # Metrics
 
