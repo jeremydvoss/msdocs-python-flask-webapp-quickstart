@@ -1,12 +1,38 @@
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
-app = Flask(__name__)
+import flask
 import logging
 import requests
 import os
 
+from opentelemetry import trace
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+
+from azure.identity import ManagedIdentityCredential
+from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
+
 
 # Set up logger
 logger = logging.getLogger(__name__)
+
+FlaskInstrumentor().instrument()
+app = flask.Flask(__name__)
+
+trace.set_tracer_provider(TracerProvider())
+tracer = trace.get_tracer(__name__)
+credential = ManagedIdentityCredential(client_id="2f015595-58fa-471a-b1a2-a8d5dbdbf4bc")
+span_processor = BatchSpanProcessor(
+    AzureMonitorTraceExporter.from_connection_string(
+        "InstrumentationKey=ec500fd4-d1b0-48e4-8bea-85d15385b671;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
+        # "InstrumentationKey=a993d938-e7fa-4b18-b092-db83b5a3671d;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
+        # credential=credential,
+    )
+)
+trace.get_tracer_provider().add_span_processor(span_processor)
+trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(
+    ConsoleSpanExporter()
+))
 
 
 @app.route('/')
