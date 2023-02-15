@@ -26,7 +26,7 @@ span_processor = BatchSpanProcessor(
     AzureMonitorTraceExporter.from_connection_string(
         # "InstrumentationKey=ec500fd4-d1b0-48e4-8bea-85d15385b671;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
         "InstrumentationKey=a993d938-e7fa-4b18-b092-db83b5a3671d;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
-        # credential=credential,
+        credential=credential,
     )
 )
 trace.get_tracer_provider().add_span_processor(span_processor)
