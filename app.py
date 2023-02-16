@@ -21,12 +21,12 @@ app = flask.Flask(__name__)
 
 trace.set_tracer_provider(TracerProvider())
 tracer = trace.get_tracer(__name__)
-credential = ManagedIdentityCredential(client_id="2f015595-58fa-471a-b1a2-a8d5dbdbf4bc")
+# credential = ManagedIdentityCredential(client_id="2f015595-58fa-471a-b1a2-a8d5dbdbf4bc")
 span_processor = BatchSpanProcessor(
     AzureMonitorTraceExporter.from_connection_string(
         # "InstrumentationKey=ec500fd4-d1b0-48e4-8bea-85d15385b671;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
         "InstrumentationKey=a993d938-e7fa-4b18-b092-db83b5a3671d;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
-        credential=credential,
+        # credential=credential,
     )
 )
 trace.get_tracer_provider().add_span_processor(span_processor)
@@ -122,7 +122,7 @@ def traces_dependencies():
     requests.get('https://learn.microsoft.com/en-us/azure/azure-monitor/app/opentelemetry-enable?tabs=python')
     return "Test app dependency"
 
-@app.route('/traces')
+@app.route('/traces-no-aad')
 def traces():
     # traces_requests()
     # traces_exception_requests()
