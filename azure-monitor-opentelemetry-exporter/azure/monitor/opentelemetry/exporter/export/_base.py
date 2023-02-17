@@ -101,15 +101,15 @@ class BaseExporter:
             # DistributedTracingPolicy(**kwargs),
             config.http_logging_policy or HttpLoggingPolicy(**kwargs)
         ]
-        # if self._credential:
-        #     if not hasattr(self._credential, 'get_token'):
-        #         raise ValueError(
-        #             'Must pass in valid TokenCredential.'
-        #         )
-        #     policies.append(BearerTokenCredentialPolicy(
-        #         self._credential,
-        #         _APPLICATION_INSIGHTS_RESOURCE_SCOPE,
-        #     ))
+        if self._credential:
+            # if not hasattr(self._credential, 'get_token'):
+            #     raise ValueError(
+            #         'Must pass in valid TokenCredential.'
+            #     )
+            policies.append(BearerTokenCredentialPolicy(
+                self._credential,
+                _APPLICATION_INSIGHTS_RESOURCE_SCOPE,
+            ))
         
         self.client = AzureMonitorClient(
             host=self._endpoint, connection_timeout=self._timeout, policies=policies, **kwargs)
