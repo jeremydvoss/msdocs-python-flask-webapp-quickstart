@@ -102,14 +102,7 @@ class BaseExporter:
             config.http_logging_policy or HttpLoggingPolicy(**kwargs)
         ]
         if self._credential:
-            if not hasattr(self._credential, 'get_token'):
-                raise ValueError(
-                    'Must pass in valid TokenCredential.'
-                )
-            policies.append(BearerTokenCredentialPolicy(
-                self._credential,
-                _APPLICATION_INSIGHTS_RESOURCE_SCOPE,
-            ))
+            _add_credential_policy(policies, self._credential)
         
         self.client = AzureMonitorClient(
             host=self._endpoint, connection_timeout=self._timeout, policies=policies, **kwargs)
@@ -318,6 +311,17 @@ class BaseExporter:
 
     def _is_stats_exporter(self):
         return self.__class__.__name__ == "_StatsBeatExporter"
+
+
+def _add_credential_policy(policies, credential):
+    if not hasattr(credential, 'get_token'):
+        raise ValueError(
+            'Must pass in valid TokenCredential.'
+        )
+    policies.append(BearerTokenCredentialPolicy(
+        credential,
+        _APPLICATION_INSIGHTS_RESOURCE_SCOPE,
+    ))
 
 
 def _is_redirect_code(response_code: int) -> bool:
