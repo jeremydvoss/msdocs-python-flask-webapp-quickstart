@@ -24,8 +24,8 @@ tracer = trace.get_tracer(__name__)
 credential = ManagedIdentityCredential(client_id="2f015595-58fa-471a-b1a2-a8d5dbdbf4bc")
 span_processor = BatchSpanProcessor(
     AzureMonitorTraceExporter.from_connection_string(
-        # "InstrumentationKey=ec500fd4-d1b0-48e4-8bea-85d15385b671;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
-        "InstrumentationKey=a993d938-e7fa-4b18-b092-db83b5a3671d;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
+        "InstrumentationKey=ec500fd4-d1b0-48e4-8bea-85d15385b671;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
+        # "InstrumentationKey=a993d938-e7fa-4b18-b092-db83b5a3671d;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/",
         credential=credential,
     )
 )
