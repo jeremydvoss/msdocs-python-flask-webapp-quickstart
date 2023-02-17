@@ -642,6 +642,28 @@ class TestBaseExporter(unittest.TestCase):
         status = self._base._transmit([])
         self.assertEqual(status, ExportResult.SUCCESS)
 
+    def test_aad_credential(self):
+        class TestCredential():
+            def get_token():
+                return "TEST_TOKEN"
+        credential = TestCredential()
+        exporter = BaseExporter(credential=credential)
+        # TODO: JEREVOSS: Mock object so you can test it was called with credential
+        with mock.patch.object(AzureMonitorClient, 'track') as post:
+            post.return_value = TrackResponse(
+                items_received=1,
+                items_accepted=1,
+                errors=[],
+            )
+            exporter._transmit(self._envelopes_to_export)
+        post.assert_called_with(self._envelopes_to_export, credential=credential)
+
+    def test_invalid_aad_credential(self):
+        class InvalidTestCredential():
+            def invalid_get_token():
+                return "TEST_TOKEN"
+        self.assertRaises(ValueError, BaseExporter, credential=InvalidTestCredential())
+
 
 class MockResponse:
     def __init__(self, status_code, text, headers={}, reason="test", content="{}"):

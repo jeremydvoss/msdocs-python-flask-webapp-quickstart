@@ -13,7 +13,7 @@ import flask
 from opentelemetry import trace
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
 from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
 
@@ -29,6 +29,9 @@ span_processor = BatchSpanProcessor(
     )
 )
 trace.get_tracer_provider().add_span_processor(span_processor)
+trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(
+    ConsoleSpanExporter()
+))
 
 @app.route("/")
 def test():

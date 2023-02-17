@@ -21,7 +21,7 @@ from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
 
 set_logger_provider(LoggerProvider())
-credential = ManagedIdentityCredential()
+credential = ManagedIdentityCredential(client_id="<client_id>")
 exporter = AzureMonitorLogExporter.from_connection_string(
     os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"],
     credential=credential
@@ -34,4 +34,4 @@ logger = logging.getLogger(__name__)
 logger.addHandler(handler)
 logger.setLevel(logging.NOTSET)
 
-logger.warning("Hello World! with AAD")
+logger.warning("Hello World with AAD Managed Identity!")

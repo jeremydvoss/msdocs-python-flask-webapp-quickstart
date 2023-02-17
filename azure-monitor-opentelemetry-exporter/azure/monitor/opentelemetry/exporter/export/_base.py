@@ -9,7 +9,7 @@ from typing import List, Any
 from urllib.parse import urlparse
 
 from azure.core.exceptions import HttpResponseError, ServiceRequestError
-from azure.core.pipeline.policies import ContentDecodePolicy, HttpLoggingPolicy, RedirectPolicy, RequestIdPolicy
+from azure.core.pipeline.policies import ContentDecodePolicy, HttpLoggingPolicy, RedirectPolicy, RequestIdPolicy, BearerTokenCredentialPolicy
 from azure.monitor.opentelemetry.exporter._generated import AzureMonitorClient
 from azure.monitor.opentelemetry.exporter._generated._configuration import AzureMonitorClientConfiguration
 from azure.monitor.opentelemetry.exporter._generated.models import TelemetryItem
@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 _AZURE_TEMPDIR_PREFIX = "Microsoft/AzureMonitor"
 _TEMPDIR_PREFIX = "opentelemetry-python-"
 _SERVICE_API_LATEST = "2020-09-15_Preview"
+_APPLICATION_INSIGHTS_RESOURCE_SCOPE = "https://monitor.azure.com//.default"
 
 class ExportResult(Enum):
     SUCCESS = 0
@@ -83,10 +84,6 @@ class BaseExporter:
         self._storage_retention_period = kwargs.get('storage_retention_period', 48 * 60 * 60)  # Retention period in seconds (default 48 hrs)
         self._timeout = kwargs.get('timeout', 10.0)  # networking timeout in seconds
 
-        if self._credential and not hasattr(self._credential, 'get_token'):
-            raise ValueError(
-                'Must pass in valid TokenCredential.'
-            )
         config = AzureMonitorClientConfiguration(self._endpoint, **kwargs)
         policies = [
             RequestIdPolicy(**kwargs),
@@ -104,6 +101,16 @@ class BaseExporter:
             # DistributedTracingPolicy(**kwargs),
             config.http_logging_policy or HttpLoggingPolicy(**kwargs)
         ]
+        if self._credential:
+            if not hasattr(self._credential, 'get_token'):
+                raise ValueError(
+                    'Must pass in valid TokenCredential.'
+                )
+            policies.append(BearerTokenCredentialPolicy(
+                credential=self._credential,
+                scopes=[_APPLICATION_INSIGHTS_RESOURCE_SCOPE]
+            ))
+        
         self.client = AzureMonitorClient(
             host=self._endpoint, connection_timeout=self._timeout, policies=policies, **kwargs)
         self.storage = None

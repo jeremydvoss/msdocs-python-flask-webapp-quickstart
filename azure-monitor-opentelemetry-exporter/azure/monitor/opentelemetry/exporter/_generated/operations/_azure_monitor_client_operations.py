@@ -26,7 +26,6 @@ if TYPE_CHECKING:
 
 _SERIALIZER = Serializer()
 _SERIALIZER.client_side_validation = False
-_MONITOR_OAUTH_SCOPE = "https://monitor.azure.com//.default"
 # fmt: off
 
 def build_track_request(
@@ -34,7 +33,6 @@ def build_track_request(
 ):
     # type: (...) -> HttpRequest
     content_type = kwargs.pop('content_type', None)  # type: Optional[str]
-    credential = kwargs.pop('credential', None)  # type: Optional[str]
 
     accept = "application/json"
     # Construct URL
@@ -44,9 +42,6 @@ def build_track_request(
     _header_parameters = kwargs.pop("headers", {})  # type: Dict[str, Any]
     if content_type is not None:
         _header_parameters['Content-Type'] = _SERIALIZER.header("content_type", content_type, 'str')
-    if credential is not None:
-        token = credential.get_token(_MONITOR_OAUTH_SCOPE)
-        _header_parameters['Authorization'] = "Bearer {}".format(token.token)
     _header_parameters['Accept'] = _SERIALIZER.header("accept", accept, 'str')
 
     return HttpRequest(
@@ -90,13 +85,11 @@ class AzureMonitorClientOperationsMixin(object):
         error_map.update(kwargs.pop('error_map', {}))
 
         content_type = kwargs.pop('content_type', "application/json")  # type: Optional[str]
-        credential = kwargs.pop('credential', None)
 
         _json = self._serialize.body(body, '[TelemetryItem]')
 
         request = build_track_request(
             content_type=content_type,
-            credential=credential,
             json=_json,
             template_url=self.track.metadata['url'],
         )
