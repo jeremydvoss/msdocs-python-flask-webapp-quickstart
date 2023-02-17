@@ -94,7 +94,7 @@ class BaseExporter:
             # Handle redirects in exporter, set new endpoint if redirected
             RedirectPolicy(permit_redirects=False),
             config.retry_policy,
-            config.authentication_policy,
+            # config.authentication_policy,
             config.custom_hook_policy,
             config.logging_policy,
             # Explicitly disabling to avoid infinite loop of Span creation when data is exported
@@ -107,10 +107,11 @@ class BaseExporter:
                     'Must pass in valid TokenCredential.'
                 )
             auth = BearerTokenCredentialPolicy(
-                self._credential,
-                _APPLICATION_INSIGHTS_RESOURCE_SCOPE,
+                credential=self._credential,
+                scopes=[_APPLICATION_INSIGHTS_RESOURCE_SCOPE],
             )
             print("JEREVOSS: auth: %s" % auth)
+            # policies.remove(config.authentication_policy)
             policies.append(auth)
         
         self.client = AzureMonitorClient(
