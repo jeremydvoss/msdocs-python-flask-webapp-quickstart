@@ -106,10 +106,12 @@ class BaseExporter:
                 raise ValueError(
                     'Must pass in valid TokenCredential.'
                 )
-            policies.append(BearerTokenCredentialPolicy(
+            auth = BearerTokenCredentialPolicy(
                 self._credential,
                 _APPLICATION_INSIGHTS_RESOURCE_SCOPE,
-            ))
+            )
+            print("JEREVOSS: auth: %s" % auth)
+            policies.append(auth)
         
         self.client = AzureMonitorClient(
             host=self._endpoint, connection_timeout=self._timeout, policies=policies, **kwargs)
