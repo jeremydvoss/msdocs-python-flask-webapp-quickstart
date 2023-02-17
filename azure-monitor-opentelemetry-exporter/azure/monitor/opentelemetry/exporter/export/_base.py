@@ -94,25 +94,22 @@ class BaseExporter:
             # Handle redirects in exporter, set new endpoint if redirected
             RedirectPolicy(permit_redirects=False),
             config.retry_policy,
-            # config.authentication_policy,
+            config.authentication_policy,
             config.custom_hook_policy,
             config.logging_policy,
             # Explicitly disabling to avoid infinite loop of Span creation when data is exported
             # DistributedTracingPolicy(**kwargs),
             config.http_logging_policy or HttpLoggingPolicy(**kwargs)
         ]
-        if self._credential:
-            if not hasattr(self._credential, 'get_token'):
-                raise ValueError(
-                    'Must pass in valid TokenCredential.'
-                )
-            auth = BearerTokenCredentialPolicy(
-                credential=self._credential,
-                scopes=[_APPLICATION_INSIGHTS_RESOURCE_SCOPE],
-            )
-            print("JEREVOSS: auth: %s" % auth)
-            # policies.remove(config.authentication_policy)
-            policies.append(auth)
+        # if self._credential:
+        #     if not hasattr(self._credential, 'get_token'):
+        #         raise ValueError(
+        #             'Must pass in valid TokenCredential.'
+        #         )
+        #     policies.append(BearerTokenCredentialPolicy(
+        #         self._credential,
+        #         _APPLICATION_INSIGHTS_RESOURCE_SCOPE,
+        #     ))
         
         self.client = AzureMonitorClient(
             host=self._endpoint, connection_timeout=self._timeout, policies=policies, **kwargs)
@@ -171,7 +168,7 @@ class BaseExporter:
             reach_ingestion = False
             try:
                 start_time = time.time()
-                track_response = self.client.track(envelopes, credential=self._credential)
+                track_response = self.client.track(envelopes)
                 if not track_response.errors:  # 200
                     self._consecutive_redirects = 0
                     if not self._is_stats_exporter():
