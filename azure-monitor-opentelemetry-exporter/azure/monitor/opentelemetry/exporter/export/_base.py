@@ -107,8 +107,8 @@ class BaseExporter:
                     'Must pass in valid TokenCredential.'
                 )
             policies.append(BearerTokenCredentialPolicy(
+                _APPLICATION_INSIGHTS_RESOURCE_SCOPE,
                 credential=self._credential,
-                scopes=[_APPLICATION_INSIGHTS_RESOURCE_SCOPE]
             ))
         
         self.client = AzureMonitorClient(
