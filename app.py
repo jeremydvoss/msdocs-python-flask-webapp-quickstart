@@ -21,8 +21,8 @@ app = flask.Flask(__name__)
 
 trace.set_tracer_provider(TracerProvider())
 tracer = trace.get_tracer(__name__)
-# credential = ManagedIdentityCredential()
-credential = ManagedIdentityCredential(client_id="x")
+credential = ManagedIdentityCredential()
+# credential = ManagedIdentityCredential(client_id="x")
 # credential = ManagedIdentityCredential(client_id="2f015595-58fa-471a-b1a2-a8d5dbdbf4bc")
 span_processor = BatchSpanProcessor(
     AzureMonitorTraceExporter.from_connection_string(
