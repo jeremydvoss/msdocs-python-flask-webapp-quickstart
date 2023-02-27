@@ -1,5 +1,6 @@
 Flask==2.0.2
 azure-monitor-opentelemetry-exporter/
+azure-identity
 opentelemetry-api==1.15.0
 opentelemetry-sdk==1.15.0
 opentelemetry-instrumentation-flask==0.36b0

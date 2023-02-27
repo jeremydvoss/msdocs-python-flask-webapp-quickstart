@@ -9,7 +9,13 @@ from typing import List, Any
 from urllib.parse import urlparse
 
 from azure.core.exceptions import HttpResponseError, ServiceRequestError
-from azure.core.pipeline.policies import ContentDecodePolicy, HttpLoggingPolicy, RedirectPolicy, RequestIdPolicy, BearerTokenCredentialPolicy
+from azure.core.pipeline.policies import (
+    BearerTokenCredentialPolicy,
+    ContentDecodePolicy,
+    HttpLoggingPolicy,
+    RedirectPolicy,
+    RequestIdPolicy,
+)
 from azure.monitor.opentelemetry.exporter._generated import AzureMonitorClient
 from azure.monitor.opentelemetry.exporter._generated._configuration import AzureMonitorClientConfiguration
 from azure.monitor.opentelemetry.exporter._generated.models import TelemetryItem
@@ -36,6 +42,8 @@ from azure.monitor.opentelemetry.exporter.statsbeat._state import (
     is_statsbeat_enabled,
     set_statsbeat_initial_success,
 )
+from azure.core.exceptions import ClientAuthenticationError
+from azure.identity._exceptions import CredentialUnavailableError
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +69,7 @@ class BaseExporter:
 
         :keyword str api_version: The service API version used. Defaults to latest.
         :keyword str connection_string: The connection string used for your Application Insights resource.
+        :keyword str credential: Token credential, such as ManagedIdentityCredential or ClientSecretCredential, used for Azure Active Directory (AAD) authentication. Defaults to None.
         :keyword bool disable_offline_storage: Determines whether to disable storing failed telemetry records for retry. Defaults to `False`.
         :keyword str storage_directory: Storage path in which to store retry files. Defaults to `<tempfile.gettempdir()>/opentelemetry-python-<your-instrumentation-key>`.
         :rtype: None
@@ -103,7 +112,7 @@ class BaseExporter:
         ]
         if self._credential:
             _add_credential_policy(policies, self._credential)
-        
+
         self.client = AzureMonitorClient(
             host=self._endpoint, connection_timeout=self._timeout, policies=policies, **kwargs)
         self.storage = None
@@ -197,6 +206,16 @@ class BaseExporter:
                         result = ExportResult.FAILED_RETRYABLE
                     else:
                         result = ExportResult.FAILED_NOT_RETRYABLE
+            except CredentialUnavailableError as credential_error:
+                logger.error(
+                    "JEREVOSS: CredentialUnavailableError: %s.", credential_error
+                )
+                result = ExportResult.FAILED_NOT_RETRYABLE
+            except ClientAuthenticationError as credential_error:
+                logger.error(
+                    "JEREVOSS: ClientAuthenticationError: %s.", credential_error
+                )
+                result = ExportResult.FAILED_NOT_RETRYABLE
             except HttpResponseError as response_error:
                 # HttpResponseError is raised when a response is received
                 if _reached_ingestion_code(response_error.status_code):
