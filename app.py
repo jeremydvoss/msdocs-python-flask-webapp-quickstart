@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, send_from_
 app = Flask(__name__)
 import logging
 import requests
-import os
+from os.path import exists, isdir
 
 
 # Set up logger
@@ -106,6 +106,8 @@ def traces():
             requests.get(url_for(endpoint))
         except:
             pass
+    if exists('/agents/python'):
+        return "EXISTS"
     return 'Test app traces'
 
 # Metrics
@@ -122,4 +124,13 @@ def traces():
 
 if __name__ == '__main__':
     logger.info("JEREMY: run info")
+    if exists('/agents/python/'):
+        print("/agents/python EXISTS")
+    else:
+        print("/agents/python does not EXIST")
+    
+    if exists('~/workplace/'):
+        print("~/workplace EXISTS")
+    else:
+        print("~/workplace does not EXIST")
     app.run()
