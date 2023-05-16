@@ -1,7 +1,9 @@
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 app = Flask(__name__)
+from azure.monitor.opentelemetry import configure_azure_monitor
 
+configure_azure_monitor()
 
 @app.route('/')
 def index():
