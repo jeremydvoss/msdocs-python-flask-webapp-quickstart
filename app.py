@@ -1,11 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
-app = Flask(__name__)
 import logging
 import requests
 from os.path import exists, isdir
 from azure.monitor.opentelemetry import configure_azure_monitor
 
 configure_azure_monitor()
+
+# Need to import after configure or just "import flask"
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+
+app = Flask(__name__)
 
 # Set up logger
 logger = logging.getLogger(__name__)
