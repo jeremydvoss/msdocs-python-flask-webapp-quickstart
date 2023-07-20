@@ -124,13 +124,6 @@ def traces():
 
 if __name__ == '__main__':
     logger.info("JEREMY: run info")
-    if exists('/agents/python/'):
-        print("/agents/python EXISTS")
-    else:
-        print("/agents/python does not EXIST")
-    
-    if exists('~/workplace/'):
-        print("~/workplace EXISTS")
-    else:
-        print("~/workplace does not EXIST")
+    logger.warning("JEREMY: run warn")
+    requests.get('https://learn.microsoft.com/en-us/azure/azure-monitor/app/opentelemetry-enable?tabs=python')
     app.run()
