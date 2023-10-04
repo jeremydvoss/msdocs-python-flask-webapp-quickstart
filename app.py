@@ -2,6 +2,7 @@ import logging
 import requests
 from os.path import exists, isdir
 from azure.monitor.opentelemetry import configure_azure_monitor
+import opentelemetry.instrumentation.auto_instrumentation.sitecustomize
 
 # configure_azure_monitor()
 
