@@ -3,7 +3,7 @@ import requests
 from os.path import exists, isdir
 from azure.monitor.opentelemetry import configure_azure_monitor
 
-configure_azure_monitor()
+# configure_azure_monitor()
 
 # Need to import after configure or just "import flask"
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
@@ -45,7 +45,10 @@ def logs_error():
 @app.route('/logs/exception')
 def logs_exception():
     message = 'Test app exception log'
-    logger.exception(message)
+    try:
+        raise Exception(message)
+    except Exception as e:
+        logger.exception(e)
     return message
 
 

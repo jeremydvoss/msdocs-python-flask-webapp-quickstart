@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="68" time="4.436" timestamp="2023-09-29T15:19:18.825490" hostname="LAPTOP-jvoss"><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_attach_disabled" time="0.001" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_attach_enabled" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_diagnostics_disabled" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_diagnostics_enabled" time="0.005" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_env_var_or_default" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_env_var_or_default_empty" time="0.003" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_env_var_or_default_empty_with_defaults" time="0.003" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_extension_version" time="0.008" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_extension_version_default" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_ikey" time="0.006" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_ikey_defaults" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_log_path_linux" time="0.001" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_log_path_other" time="0.001" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_log_path_windows" time="0.005" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_status_log_path_linux" time="0.001" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_status_log_path_other" time="0.001" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.test_constants.TestConstants" name="test_status_log_path_windows" time="0.001" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.autoinstrumentation.test_configurator.TestConfigurator" name="test_configure" time="0.134" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.autoinstrumentation.test_configurator.TestConfigurator" name="test_configure_preview" time="0.094" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.autoinstrumentation.test_distro.TestDistro" name="test_configure" time="0.005" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.autoinstrumentation.test_distro.TestDistro" name="test_configure_preview" time="0.009" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_configure_azure_monitor" time="0.003" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_configure_azure_monitor_disable_logging" time="0.005" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_configure_azure_monitor_disable_metrics" time="0.004" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_configure_azure_monitor_disable_tracing" time="0.003" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_setup_instrumentations_conflict" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_setup_instrumentations_disabled" time="0.003" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_setup_instrumentations_exception" time="0.005" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_setup_instrumentations_lib_not_supported" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_setup_logging" time="0.012" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_setup_metrics" time="0.009" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_setup_resources" time="0.005" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_setup_resources_existing_detectors" time="0.004" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_configure.TestConfigure" name="test_setup_tracing" time="0.014" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_util.TestUtil" name="test_get_configurations" time="0.004" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_util.TestUtil" name="test_get_configurations_defaults" time="0.004" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_util.TestUtil" name="test_get_configurations_env_vars" time="0.006" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_util.TestUtil" name="test_get_configurations_env_vars_validation" time="0.003" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_util.TestUtil" name="test_merge_instrumentation_options_conflict" time="0.006"><failure message="AssertionError: {'django': {'enabled': False}, 'fastapi': {[265 chars]lse}} != {'azure_sdk': {'enabled': True}, 'django': [263 chars]lse}}&#10;Diff is 737 characters long. Set self.maxDiff to None to see it.">self = &lt;test_util.TestUtil testMethod=test_merge_instrumentation_options_conflict&gt;
+
+    @patch.dict(
+        "os.environ",
+        {
+            OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: "django , urllib3,previewlib1,azure_sdk",
+        },
+        clear=True,
+    )
+    @patch("azure.monitor.opentelemetry._util.configurations._PREVIEW_INSTRUMENTED_LIBRARIES", ("previewlib1", "previewlib2"))
+    def test_merge_instrumentation_options_conflict(self):
+        configurations = _get_configurations(
+            instrumentation_options = {
+                "azure_sdk" : {"enabled": True},
+                "django" : {"enabled": True},
+                "fastapi" : {"enabled": True},
+                "flask" : {"enabled": False},
+                "previewlib1": {"enabled": True},
+            }
+        )
+    
+&gt;       self.assertEqual(configurations["instrumentation_options"], {
+            "azure_sdk" : {"enabled": True}, # Explicit configuration takes priority
+            "django" : {"enabled": True}, # Explicit configuration takes priority
+            "fastapi" : {"enabled": True},
+            "flask" : {"enabled": False},
+            "psycopg2" : {"enabled": True},
+            "previewlib1": {"enabled": True}, # Explicit configuration takes priority
+            "previewlib2": {"enabled": False},
+            "requests": {"enabled": True},
+            "urllib": {"enabled": True},
+            "urllib3": {"enabled": False},
+        })
+E       AssertionError: {'django': {'enabled': False}, 'fastapi': {[265 chars]lse}} != {'azure_sdk': {'enabled': True}, 'django': [263 chars]lse}}
+E       Diff is 737 characters long. Set self.maxDiff to None to see it.
+
+tests\configuration\test_util.py:141: AssertionError</failure></testcase><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.configuration.test_util.TestUtil" name="test_merge_instrumentation_options_extra_args" time="0.005"><failure message="AssertionError: {'django': {'enabled': True}, 'fastapi': {'[332 chars]lse}} != {'azure_sdk': {'enabled': True}, 'django': [332 chars]rue}}&#10;  {'azure_sdk': {'enabled': True},&#10;   'django': {'enabled': True},&#10;   'fastapi': {'enabled': True, 'foo': 'bar'},&#10;-  'flask': {'enabled': True, 'foo': 'bar'},&#10;?                       ^^^&#10;&#10;+  'flask': {'enabled': False, 'foo': 'bar'},&#10;?                       ^^^^&#10;&#10;-  'previewlib1': {'enabled': False, 'foo': 'bar'},&#10;?                             ^^^^&#10;&#10;+  'previewlib1': {'enabled': True, 'foo': 'bar'},&#10;?                             ^^^&#10;&#10;   'previewlib2': {'enabled': False, 'foo': 'bar'},&#10;   'psycopg2': {'enabled': True, 'foo': 'bar'},&#10;   'requests': {'enabled': True},&#10;   'urllib': {'enabled': True},&#10;   'urllib3': {'enabled': True}}">self = &lt;test_util.TestUtil testMethod=test_merge_instrumentation_options_extra_args&gt;
+
+    @patch.dict("os.environ", {}, clear=True)
+    @patch("azure.monitor.opentelemetry._util.configurations._PREVIEW_INSTRUMENTED_LIBRARIES", ("previewlib1", "previewlib2"))
+    def test_merge_instrumentation_options_extra_args(self):
+        configurations = _get_configurations(
+            instrumentation_options = {
+                "django" : {"enabled": True},
+                "fastapi" : {"enabled": True, "foo": "bar"},
+                "flask" : {"enabled": False, "foo": "bar"},
+                "psycopg2" : {"foo": "bar"},
+                "previewlib1": {"enabled": True, "foo": "bar"},
+                "previewlib2": {"foo": "bar"},
+            }
+        )
+    
+&gt;       self.assertEqual(configurations["instrumentation_options"], {
+            "azure_sdk" : {"enabled": True},
+            "django" : {"enabled": True},
+            "fastapi" : {"enabled": True, "foo": "bar"},
+            "flask" : {"enabled": False, "foo": "bar"},
+            "psycopg2" : {"enabled": True, "foo": "bar"},
+            "previewlib1": {"enabled": True, "foo": "bar"},
+            "previewlib2": {"enabled": False, "foo": "bar"},
+            "requests": {"enabled": True},
+            "urllib": {"enabled": True},
+            "urllib3": {"enabled": True},
+        })
+E       AssertionError: {'django': {'enabled': True}, 'fastapi': {'[332 chars]lse}} != {'azure_sdk': {'enabled': True}, 'django': [332 chars]rue}}
+E         {'azure_sdk': {'enabled': True},
+E          'django': {'enabled': True},
+E          'fastapi': {'enabled': True, 'foo': 'bar'},
+E       -  'flask': {'enabled': True, 'foo': 'bar'},
+E       ?                       ^^^
+E       
+E       +  'flask': {'enabled': False, 'foo': 'bar'},
+E       ?                       ^^^^
+E       
+E       -  'previewlib1': {'enabled': False, 'foo': 'bar'},
+E       ?                             ^^^^
+E       
+E       +  'previewlib1': {'enabled': True, 'foo': 'bar'},
+E       ?                             ^^^
+E       
+E          'previewlib2': {'enabled': False, 'foo': 'bar'},
+E          'psycopg2': {'enabled': True, 'foo': 'bar'},
+E          'requests': {'enabled': True},
+E          'urllib': {'enabled': True},
+E          'urllib3': {'enabled': True}}
+
+tests\configuration\test_util.py:168: AssertionError</failure></testcase><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_initialized" time="0.004" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_uninitialized" time="0.003" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_info" time="0.005" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_info_with_info_log_level" time="0.030" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_info_with_sub_module_info_log_level" time="0.023" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_warning" time="0.017" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_warning_multiple_enable" time="0.019" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_error" time="0.016" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_off_app_service_info" time="0.009" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_off_app_service_warning" time="0.004" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_off_app_service_error" time="0.010" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_subscription_id_plus" time="0.016" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_diagnostic_logging.TestDiagnosticLogger" name="test_subscription_id_no_plus" time="0.019" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_status_logger.TestStatusLogger" name="test_log_status_success" time="0.017" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_status_logger.TestStatusLogger" name="test_log_status_failed_initialization" time="0.018" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_status_logger.TestStatusLogger" name="test_log_status_no_reason" time="0.029" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_status_logger.TestStatusLogger" name="test_disabled_log_status_success" time="0.009" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_status_logger.TestStatusLogger" name="test_disabled_log_status_failed_initialization" time="0.004" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_status_logger.TestStatusLogger" name="test_disabled_log_status_no_reason" time="0.009" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.diagnostics.test_status_logger.TestStatusLogger" name="test_get_status_logger_file_name" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.exporter.test_exporter.TestAzureMonitorExporters" name="test_constructors" time="0.317" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.instrumentation.test_django.TestDjangoInstrumentation" name="test_instrument" time="0.004" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.instrumentation.test_fastapi.TestFastApiInstrumentation" name="test_instrument" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.instrumentation.test_flask.TestFlaskInstrumentation" name="test_instrument" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.instrumentation.test_psycopg2.TestPsycopg2Instrumentation" name="test_instrument" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.instrumentation.test_requests.TestRequestsInstrumentation" name="test_instrument" time="0.002" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.instrumentation.test_urllib.TestUrllibInstrumentation" name="test_instrument" time="0.001" /><testcase classname="sdk.monitor.azure-monitor-opentelemetry.tests.instrumentation.test_urllib3.TestUrllib3Instrumentation" name="test_instrument" time="0.004" /></testsuite></testsuites>

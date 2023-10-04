@@ -1,0 +1,293 @@
+#load "kustoclusterinfo"
+// *****PLEASE DO NOT MODIFY THIS PART*****
+using Diagnostics.DataProviders;
+using Diagnostics.ModelsAndUtils.Utilities;
+using Diagnostics.ModelsAndUtils.Models;
+using Diagnostics.ModelsAndUtils.Models.ResponseExtensions;
+using Diagnostics.ModelsAndUtils.Attributes;
+using Diagnostics.ModelsAndUtils.ScriptUtilities;
+using Kusto.Data;
+//*****END OF DO NOT MODIFY PART*****
+
+
+
+
+using System;
+using System.Linq;
+using System.Data;
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+using Diagnostics.DataProviders;
+using Diagnostics.ModelsAndUtils;
+using Diagnostics.ModelsAndUtils.Attributes;
+using Diagnostics.ModelsAndUtils.Models;
+using Diagnostics.ModelsAndUtils.Models.ResponseExtensions;
+using Diagnostics.ModelsAndUtils.ScriptUtilities;
+using Newtonsoft.Json;
+using System.ComponentModel;
+using System.Text;
+
+private static string GetExtensionTrace(OperationContext<App> cxt)
+{
+    return
+    $@"WebAppsAppInsightsExtensionLinux
+    | where siteName =~ '{cxt.Resource.Name}'
+    | order by ['time'] desc
+    | limit 200
+    | project ['time'], logger, message";
+}
+
+[AppFilter(AppType = AppType.WebApp | AppType.ApiApp, PlatformType = PlatformType.Linux, StackType = StackType.AspNet | StackType.NetCore)]
+[Definition(Id = "ApplicationInsightsLinuxAutoInstrumentation", Name = "Application Insights .NET Auto Instrumentation - Linux", Author = "rajrang, xili9", Category = Categories.ConfigurationAndManagement, Description = "This view provides information about Application Insights Auto Instrumentation")]
+public async static Task<Response> Run(DataProviders dp, OperationContext<App> cxt, Response res)
+{
+    var subId = cxt.Resource.SubscriptionId;
+    var rg = cxt.Resource.ResourceGroup;
+    var name = cxt.Resource.Name;
+    var slot = cxt.Resource.Slot;
+    string descriptionText = string.Empty;
+    List<ExtensionData> extensionTraceList = new List<ExtensionData>();
+    string extensionTraceTableMarkdown = string.Empty;
+    int statusInsight = (int)InsightStatus.Critical;
+    string traceStart = "BaseFolderLocation:";
+    int startIndex = 0;
+    int endIndex = 0;
+
+    try
+    {
+        DataTable aiTraceTable = null;
+
+        IDictionary<string, string> appSettings = null;
+        try {
+            appSettings = await dp.GeoMaster.GetAppSettings(subId, rg, name, slot);
+        }
+        catch
+        {
+            appSettings = new Dictionary<string, string>();
+        }
+
+
+        try
+        {
+            aiTraceTable = await dp.Kusto.ExecuteQuery(GetExtensionTrace(cxt), cxt.Resource.Stamp.Name);
+        }
+        catch
+        {
+            // Handle failure in specific region due to table filters
+            var leaderClusterName = await KustoClusterInfo.GetLeaderCluster(dp, cxt, GetExtensionTrace(cxt));
+            aiTraceTable = await dp.Kusto.ExecuteClusterQuery(GetExtensionTrace(cxt), leaderClusterName, "wawsprod", null, "GetExtensionTrace");
+        }
+
+        if (aiTraceTable?.Rows?.Count > 0)
+        {
+            // Copy datatable output to list 
+            foreach (DataRow dr in aiTraceTable.Rows)
+            {
+                ExtensionData extData = new ExtensionData
+                {
+                    TIMESTAMP = dr["time"].ToString(),
+                    ProviderName = dr["logger"].ToString(),
+                    Message = dr["message"].ToString().Replace("\n", "").Replace("\r", ""),
+                };
+                extensionTraceList.Add(extData);
+            }
+
+            // extensionTraceList.Reverse(); //<< Not needed, we want newest full attach status result, not oldest attach status [toddfous]
+
+            // Select sigle set of data for validation.
+            var indexList = extensionTraceList.Where(x => x.Message.Contains(traceStart));
+
+            if (indexList?.Count() > 0)
+            {
+                foreach (var extensionTrace in indexList)
+                {
+                    endIndex = extensionTraceList.IndexOf(extensionTrace);
+                    break;
+                }
+
+                if (endIndex <= startIndex)
+                {
+                    descriptionText = "This extension could not validate the data, please use data sources tab to execute the raw data.";
+                }
+                else
+                {
+                    var filteredTraceList = extensionTraceList.Skip(startIndex).Take(endIndex - startIndex).ToList();
+                    filteredTraceList.Reverse();  //After finding the actual data, reverse the order because query was ordered by time desc.
+                    AttachStatus attStatus = getAttachCoreStatus(filteredTraceList, appSettings);
+                    descriptionText = attStatus.descriptionText;
+                    extensionTraceTableMarkdown = attStatus.extensionTraceTableMarkdown;
+                    statusInsight = attStatus.statusInsight;
+                }
+            }
+            else
+            {
+                descriptionText = "This extension could not validate the data, please use data sources tab to execute the raw data.";
+            }
+        }
+        else
+        {
+            descriptionText = "This Application is not instrumented with Codeless attach.";
+        }
+    }
+    catch (Exception ex)
+    {
+        descriptionText = "This extension could not validate the data, An exception thrown during parse. " + ex.ToString();
+    }
+
+    descriptionText += Environment.NewLine + Environment.NewLine;
+
+    string markDown = $"<markdown>{descriptionText} {Environment.NewLine} </markdown>";
+    var insightDetails = new Dictionary<string, string>();
+    insightDetails.Add("Status", markDown);
+    var insight = new Insight((InsightStatus)statusInsight, "Application Insights Auto Instrumentation", insightDetails, true);
+    res.AddInsight(insight);
+    return res;
+}
+
+static AttachStatus getAttachCoreStatus(List<ExtensionData> extensionTraceList, IDictionary<string, string> appSettings)
+{
+    string description = string.Empty;
+    int statInsight = (int)InsightStatus.Critical;
+    string TraceTableMarkdown = string.Empty;
+
+    string collectionLevel = "Basic";
+    string instrumentationKey = string.Empty;
+    appSettings.TryGetValue("XDT_MicrosoftApplicationInsights_Mode", out collectionLevel);
+    collectionLevel = collectionLevel == "default" ? "Basic" : "Recommended";
+    appSettings.TryGetValue("APPINSIGHTS_INSTRUMENTATIONKEY", out instrumentationKey);
+
+    var extensionTraceTable = extensionTraceList.PropertiesToDataTable<ExtensionData>();
+    TraceTableMarkdown = DataTableToMarkdown(extensionTraceTable);
+
+    if (extensionTraceList.Where(x => x.Message.Contains(SearchCoreCategory.INTEROP)).Count() > 0)
+    {
+        description = String.Format(LogCategory.Interop, AutoInstrumentationVersionText(extensionTraceList), collectionLevel, instrumentationKey);
+        statInsight = (int)InsightStatus.Success;
+    }
+    else if (extensionTraceList.Where(x => x.Message.Contains(SearchCoreCategory.SDKEXISTS)).Count() > 0)
+    {
+        description = String.Format(LogCategory.SdkExists, AutoInstrumentationVersionText(extensionTraceList), ParseApplicationInsightsDllLocation(extensionTraceList));
+        statInsight = (int)InsightStatus.Warning;
+    }
+    else if (extensionTraceList.Where(x => x.Message.Contains(SearchCoreCategory.SUCCESS)).Count() > 0)
+    {
+        description = String.Format(LogCategory.Success, AutoInstrumentationVersionText(extensionTraceList), collectionLevel, instrumentationKey);
+        statInsight = (int)InsightStatus.Success;
+    }
+    else
+    {
+        description = LogCategory.Error;
+        statInsight = (int)InsightStatus.Warning;
+    }
+
+    // description += " Please refer to below table for more information.";
+
+    return new AttachStatus()
+    {
+        descriptionText = description,
+        statusInsight = statInsight,
+        extensionTraceTableMarkdown = TraceTableMarkdown
+    };
+}
+
+static string ParseApplicationInsightsDllLocation(List<ExtensionData> extensionTraceList)
+{
+    return FindString(extensionTraceList, "CheckApplicationInsightsAlreadyExists: file: ", ", exists");
+}
+
+static string AutoInstrumentationVersionText(List<ExtensionData> extensionTraceList)
+{
+    var version = FindString(extensionTraceList, "ApplicationInsightsAgent\\", "\\");
+    if ("Not Found".Equals(version))
+    {
+        return "";
+    }
+    return " v" + version;
+}
+
+static string FindString(List<ExtensionData> extensionTraceList, string preText, string postText)
+{
+    var matches = extensionTraceList.Where(x => x.Message.Contains(preText));
+    if (matches.Count() > 0)
+    {
+        string message = matches.First().Message;
+        var startIndex = message.IndexOf(preText) + preText.Length;
+        var endIndex = message.IndexOf(postText, startIndex);
+        if (endIndex > startIndex)
+        {
+            return message.Substring(startIndex, endIndex - startIndex);
+        }
+    }
+    return "Not Found";
+}
+
+class ExtensionData
+{
+    public string TIMESTAMP { get; set; }
+    public string ProviderName { get; set; }
+    public string Message { get; set; }
+}
+
+static DataTable PropertiesToDataTable<T>(this IEnumerable<T> source)
+{
+    DataTable dt = new DataTable();
+    var props = TypeDescriptor.GetProperties(typeof(T));
+    foreach (PropertyDescriptor prop in props)
+    {
+        DataColumn dc = dt.Columns.Add(prop.Name, prop.PropertyType);
+        dc.Caption = prop.DisplayName;
+        dc.ReadOnly = prop.IsReadOnly;
+    }
+    foreach (T item in source)
+    {
+        DataRow dr = dt.NewRow();
+        foreach (PropertyDescriptor prop in props)
+        {
+            dr[prop.Name] = prop.GetValue(item);
+        }
+        dt.Rows.Add(dr);
+    }
+    return dt;
+}
+
+static string DataTableToMarkdown(DataTable dt)
+{
+    var markDownBuilder = new StringBuilder();
+    List<string> columns = new List<string>();
+    markDownBuilder.AppendLine(string.Join(" | ", dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName)));
+    string columnHeader = new StringBuilder().Insert(0, " --- |", dt.Columns.Count).ToString();
+    columnHeader = columnHeader.Substring(1, columnHeader.Length - 1);
+    markDownBuilder.AppendLine(columnHeader);
+    foreach (DataRow dr in dt.Rows)
+    {
+        markDownBuilder.AppendLine(string.Join(" | ", dr.ItemArray));
+    }
+    return markDownBuilder.ToString();
+}
+
+public class LogCategory
+{
+    public static string Success = "Application Insights Auto-Instrumentation{0} is successfully enabled and loaded for this webapp using the {1} collection level for a component with ikey {2}.";
+    public static string SdkExists = "Application Insights Auto-Instrumentation{0} is enabled for this web app. But instrumentation has backed-off as it found a reference of ApplicationInsights.dll at '{1}'. Please use <a href='https://docs.microsoft.com/azure/azure-monitor/app/azure-web-apps-net-core?tabs=Windows%2Cwindows#troubleshooting' target='_blank'>this article</a> to troubleshoot the issue for when your application refers to any Application Insights packages.";
+    public static string Interop = "Application Insights Auto-Instrumentation{0} is successfully enabled and loaded with Interop option for this webapp using the {1} collection level for a component with ikey {2}. Read more about Interop <a href='https://docs.microsoft.com/azure/azure-monitor/app/azure-web-apps-net-core?tabs=Windows%2Cwindows' target='_blank'>here</a>.";
+    public static string Error = "Codeless agent has failed.";
+    public static string NoAttach = "This Application is not instrumented with Codeless attach.";
+}
+
+public class SearchCoreCategory
+{
+    public static string SUCCESS = "ApplicationInsights SDK was enabled from Microsoft.ApplicationInsights.AiHostingStartup.ApplicationInsightsStartupLoader";
+    public static string SDKEXISTS = "BootstrapperHostingStartup: skipped loading `Microsoft.ApplicationInsights.AiHostingStartup`, appInsightsAlreadyExists: True.";
+    public static string INTEROP = "ignoreSDK: True. appInsightsAlreadyExists: True";
+}
+
+class AttachStatus
+{
+    public string descriptionText { get; set; }
+    public int statusInsight { get; set; }
+    public string extensionTraceTableMarkdown { get; set; }
+}
+

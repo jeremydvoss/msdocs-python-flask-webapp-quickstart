@@ -1,0 +1,459 @@
+#load "kustoclusterinfo"
+// *****PLEASE DO NOT MODIFY THIS PART*****
+using Diagnostics.DataProviders;
+using Diagnostics.ModelsAndUtils.Utilities;
+using Diagnostics.ModelsAndUtils.Models;
+using Diagnostics.ModelsAndUtils.Models.ResponseExtensions;
+using Diagnostics.ModelsAndUtils.Attributes;
+using Diagnostics.ModelsAndUtils.ScriptUtilities;
+using Kusto.Data;
+//*****END OF DO NOT MODIFY PART*****
+
+
+
+using System;
+using System.Linq;
+using System.Data;
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+using Diagnostics.ModelsAndUtils;
+using Newtonsoft.Json;
+using System.ComponentModel;
+using System.Text;
+
+enum Language {
+    JAVA,
+    NODE,
+    NET_CORE,
+    ASPNET
+}
+
+private static Language language;
+
+private static string GetExtensionTrace(OperationContext<App> cxt)
+{
+    return
+    $@"WebAppsAppInsightsExtensionLinux
+    | where siteName =~ '{cxt.Resource.Name}'
+    | where isnotnull(msgId) and isnotempty(msgId)
+    | order by ['time'] desc
+    | project ['time'], logger, message, msgId, language";
+}
+
+[AppFilter(AppType = AppType.WebApp | AppType.ApiApp, PlatformType = PlatformType.Linux)]
+[Definition(Id = "ApplicationInsightsAutoInstrumentationNodeJavaDotNetPythonLinux", Name = "Application Insights Java, Dot Net, Node, and Python Auto Instrumentation - Linux", Author = "heya, jacksonweber, jeremyvoss", Category = Categories.ConfigurationAndManagement, Description = "This view provides information about Application Insights Java, Node, and Dot Net Auto Instrumentation Linux")]
+public async static Task<Response> Run(DataProviders dp, OperationContext<App> cxt, Response res)
+{
+    var subId = cxt.Resource.SubscriptionId;
+    var rg = cxt.Resource.ResourceGroup;
+    var name = cxt.Resource.Name;
+    var slot = cxt.Resource.Slot;
+    string descriptionText = string.Empty;
+    List<ExtensionData> extensionTraceList = new List<ExtensionData>();
+    string extensionTraceTableMarkdown = string.Empty;
+    int statusInsight = (int)InsightStatus.Critical;
+
+    try
+    {
+        DataTable aiTraceTable = null;
+        IDictionary<string, string> appSettings = null;
+        try {
+			appSettings = await dp.GeoMaster.GetAppSettings(subId, rg, name, slot);
+        }
+        catch
+        {
+            appSettings = new Dictionary<string, string>();
+        }
+
+        try
+        {
+            aiTraceTable = await dp.Kusto.ExecuteQuery(GetExtensionTrace(cxt), cxt.Resource.Stamp.Name);
+            if (aiTraceTable.Rows.Count == 0) {
+                throw new ApplicationException("Initial call failed to query Kusto due to table filters.");
+            }
+        }
+        catch
+        {
+            // Handle failure in specific region due to table filters
+            var leaderClusterName = await KustoClusterInfo.GetLeaderCluster(dp, cxt, GetExtensionTrace(cxt));
+            aiTraceTable = await dp.Kusto.ExecuteClusterQuery(GetExtensionTrace(cxt), leaderClusterName, "wawsprod", null, "GetExtensionTrace");
+        }
+
+        if (aiTraceTable?.Rows?.Count > 0) {           
+            for (int i = 0; i < aiTraceTable.Rows.Count; i++) {
+                if ("java".Equals(aiTraceTable.Rows[i]["language"].ToString())) {
+                    language = Language.JAVA;
+                    break;
+                } else if ("node".Equals(aiTraceTable.Rows[i]["language"].ToString())) {
+                    language = Language.NODE;
+                    break;
+                } else if ("python".Equals(aiTraceTable.Rows[i]["language"].ToString())) {
+                    language = Language.PYTHON;
+                    break;
+                }
+            }
+            // Copy datatable output to list 
+            foreach (DataRow dr in aiTraceTable.Rows) {
+                ExtensionData extData = new ExtensionData {
+                    TIMESTAMP = dr["time"].ToString(),
+                    Message = dr["message"].ToString().Replace("\n", "").Replace("\r", ""),
+                    msgId = dr["msgid"].ToString(),
+                    Language = dr["language"].ToString()
+                };
+                extensionTraceList.Add(extData);
+            }
+
+            var indexList = extensionTraceList;
+
+            if (indexList?.Count() > 0) {
+                AttachStatus attStatus = getAttachStatus(indexList, appSettings);
+                descriptionText = attStatus.descriptionText;
+                extensionTraceTableMarkdown = attStatus.extensionTraceTableMarkdown;
+                statusInsight = attStatus.statusInsight;
+            } else {
+                descriptionText = "Application Insights Java Auto-Instrumentation has not been attched yet.";
+            }
+        } else {
+            descriptionText = "This Application is not instrumented with Codeless attach.";
+        }
+    }
+    catch (Exception ex)
+    {
+        descriptionText = "This extension could not validate the data, An exception thrown during parse. " + ex.ToString();
+    }
+
+    descriptionText += Environment.NewLine + Environment.NewLine;
+
+    string markDown = $"<markdown>{descriptionText} {Environment.NewLine} </markdown>";
+    var insightDetails = new Dictionary<string, string>();
+    insightDetails.Add("Status", markDown);
+    var insight = new Insight((InsightStatus)statusInsight, "Application Insights Java Codeless Agent", insightDetails, true);
+    res.AddInsight(insight);
+    return res;
+}
+
+static AttachStatus getAttachStatus(List<ExtensionData> extensionTraceList, IDictionary<string, string> appSettings)
+{
+    string description = string.Empty;
+    int statInsight = (int)InsightStatus.Critical;
+    string TraceTableMarkdown = string.Empty;
+
+    string instrumentationKey = string.Empty;
+    appSettings.TryGetValue("APPINSIGHTS_INSTRUMENTATIONKEY", out instrumentationKey);
+
+    var extensionTraceTable = extensionTraceList.PropertiesToDataTable<ExtensionData>();
+    TraceTableMarkdown = DataTableToMarkdown(extensionTraceTable);
+
+    //***** START OF JAVA AUTO INSTRUMENTATION *****
+    if (language == Language.JAVA)
+    {
+        if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.INITIALIZATION_SUCCESS)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.INITIALIZATION_SUCCESS, instrumentationKey);
+            statInsight = (int)InsightStatus.Success;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.FREE_MEMORY_METRIC_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.FREE_MEMORY_METRIC_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.CUSTOM_JMX_METRIC_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.CUSTOM_JMX_METRIC_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.STATUS_FILE_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.STATUS_FILE_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.STARTUP_FAILURE_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.STARTUP_FAILURE_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.QUICK_PULSE_PING_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.QUICK_PULSE_PING_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.QUICK_PULSE_SEND_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.QUICK_PULSE_SEND_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.DISK_PERSISTENCE_LOADER_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.DISK_PERSISTENCE_LOADER_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.DISK_PERSISTENCE_WRITER_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.DISK_PERSISTENCE_WRITER_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.DISK_PERSISTENCE_PURGE_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.DISK_PERSISTENCE_PURGE_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.INGESTION_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.INGESTION_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.TELEMETRY_ITEM_EXPORTER_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.TELEMETRY_ITEM_EXPORTER_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.TELEMETRY_TRUNCATION_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.TELEMETRY_TRUNCATION_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.CPU_METRIC_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.CPU_METRIC_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.HOSTNAME_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.HOSTNAME_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.EXPORTER_MAPPING_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.EXPORTER_MAPPING_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.BATCH_ITEM_PROCESSOR_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.BATCH_ITEM_PROCESSOR_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.APP_ID_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.APP_ID_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.FRIENDLY_NETWORK_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.FRIENDLY_NETWORK_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Equals(MsgId.FAIL_TO_SEND_STATSBEAT_ERROR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.FAIL_TO_SEND_STATSBEAT_ERROR, instrumentationKey);
+            statInsight = (int)InsightStatus.Warning;
+        }
+    }
+    //***** END OF JAVA AUTO INSTRUMENTATION *****
+    //***** START OF NODE AUTO INSTRUMENTATION *****
+    else if (language == Language.NODE)
+    {
+        if (extensionTraceList.Where(x => x.msgId.Contains(MsgId.SDKEXISTS)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.SdkExists);
+            statInsight = (int)InsightStatus.Warning;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Contains(MsgId.SUCCESS)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.Success, instrumentationKey);
+            statInsight = (int)InsightStatus.Success;
+        }
+    }
+    //***** END OF NODE AUTO INSTRUMENTATION *****
+    //***** START OF PYTHON AUTO INSTRUMENTATION *****
+    else if (language == Language.PYTHON)
+    {
+        if (extensionTraceList.Where(x => x.msgId.Contains(MsgId.PYTHON_ATTACH_SUCCESS_CONFIGURATOR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.PYTHON_ATTACH_SUCCESS_CONFIGURATOR, instrumentationKey);
+            statInsight = (int)InsightStatus.Success;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Contains(MsgId.PYTHON_ATTACH_FAILURE_CONFIGURATOR)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.PYTHON_ATTACH_FAILURE_CONFIGURATOR, instrumentationKey);
+            statInsight = (int)InsightStatus.Error;
+        }
+        else if (extensionTraceList.Where(x => x.msgId.Contains(MsgId.PYTHON_ATTACH_FAILURE_DISTRO)).Count() > 0)
+        {
+            description = String.Format(MsgDescription.PYTHON_ATTACH_FAILURE_DISTRO, instrumentationKey);
+            statInsight = (int)InsightStatus.Error;
+        }
+        else
+        {
+            description = LogCategory.Error;
+            statInsight = (int)InsightStatus.Error;
+        }
+    }
+    //***** END OF PYTHON AUTO INSTRUMENTATION *****
+    else
+    {
+        description = LogCategory.Error;
+        statInsight = (int)InsightStatus.Warning;
+    }
+
+    return new AttachStatus()
+    {
+        descriptionText = description,
+        statusInsight = statInsight,
+        extensionTraceTableMarkdown = TraceTableMarkdown
+    };
+}
+
+class ExtensionData
+{
+    public string TIMESTAMP { get; set; }
+    public string Language { get; set; }
+    public string Message { get; set; }
+    public string msgId { get; set; }
+}
+
+static DataTable PropertiesToDataTable<T>(this IEnumerable<T> source)
+{
+    DataTable dt = new DataTable();
+    var props = TypeDescriptor.GetProperties(typeof(T));
+    foreach (PropertyDescriptor prop in props)
+    {
+        DataColumn dc = dt.Columns.Add(prop.Name, prop.PropertyType);
+        dc.Caption = prop.DisplayName;
+        dc.ReadOnly = prop.IsReadOnly;
+    }
+    foreach (T item in source)
+    {
+        DataRow dr = dt.NewRow();
+        foreach (PropertyDescriptor prop in props)
+        {
+            dr[prop.Name] = prop.GetValue(item);
+        }
+        dt.Rows.Add(dr);
+    }
+    return dt;
+}
+
+static string DataTableToMarkdown(DataTable dt)
+{
+    var markDownBuilder = new StringBuilder();
+    List<string> columns = new List<string>();
+    markDownBuilder.AppendLine(string.Join(" | ", dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName)));
+    string columnHeader = new StringBuilder().Insert(0, " --- |", dt.Columns.Count).ToString();
+    columnHeader = columnHeader.Substring(1, columnHeader.Length - 1);
+    markDownBuilder.AppendLine(columnHeader);
+    foreach (DataRow dr in dt.Rows)
+    {
+        markDownBuilder.AppendLine(string.Join(" | ", dr.ItemArray));
+    }
+    return markDownBuilder.ToString();
+}
+
+static string ParseApplicationInsightsDllLocation(List<ExtensionData> extensionTraceList)
+{
+    return FindString(extensionTraceList, "Installed SDK location:", "Error:undefined");
+}
+
+static string FindString(List<ExtensionData> extensionTraceList, string preText, string postText)
+{
+    var matches = extensionTraceList.Where(x => x.Message.Contains(preText));
+    if (matches.Count() > 0)
+    {
+        string message = matches.First().Message;
+        var startIndex = message.IndexOf(preText) + preText.Length;
+        var endIndex = message.IndexOf(postText, startIndex);
+        if (endIndex > startIndex)
+        {
+            return message.Substring(startIndex, endIndex - startIndex);
+        }
+    }
+    return "Not Found";
+}
+
+public class LogCategory
+{
+    public static string Error = "Codeless agent has failed.";
+}
+
+public class MsgId
+{
+    //***** START OF JAVA AUTO INSTRUMENTATION *****
+    public static string INITIALIZATION_SUCCESS = "2000";
+    public static string FREE_MEMORY_METRIC_ERROR = "2001";
+    public static string CUSTOM_JMX_METRIC_ERROR = "2002";
+    public static string STATUS_FILE_ERROR = "2004";
+    public static string STARTUP_FAILURE_ERROR = "2005";
+    public static string QUICK_PULSE_PING_ERROR = "2100";
+    public static string QUICK_PULSE_SEND_ERROR = "2101";
+    public static string DISK_PERSISTENCE_LOADER_ERROR = "2102";
+    public static string DISK_PERSISTENCE_WRITER_ERROR = "2103";
+    public static string DISK_PERSISTENCE_PURGE_ERROR = "2104";
+    public static string INGESTION_ERROR = "2105";
+    public static string TELEMETRY_ITEM_EXPORTER_ERROR = "2106";
+    public static string TELEMETRY_TRUNCATION_ERROR = "2107";
+    public static string CPU_METRIC_ERROR = "2108";
+    public static string HOSTNAME_ERROR = "2109";
+    public static string EXPORTER_MAPPING_ERROR = "2110";
+    public static string BATCH_ITEM_PROCESSOR_ERROR = "2111";
+    public static string APP_ID_ERROR = "2112";
+    public static string FRIENDLY_NETWORK_ERROR = "2113";
+    public static string FAIL_TO_SEND_STATSBEAT_ERROR = "2114";
+    //***** END OF JAVA AUTO INSTRUMENTATION *****
+    //***** START OF NODE AUTO INSTRUMENTATION *****
+    public static string SUCCESS = "3000";
+
+    public static string SDKEXISTS = "3001";
+    //***** END OF NODE AUTO INSTRUMENTATION *****
+    //***** START OF PYTHON AUTO INSTRUMENTATION *****
+    public static string PYTHON_ATTACH_SUCCESS_DISTRO = "4200";
+    public static string PYTHON_ATTACH_SUCCESS_CONFIGURATOR = "4201";
+    public static string PYTHON_ATTACH_FAILURE_DISTRO = "4400";
+    public static string PYTHON_ATTACH_FAILURE_CONFIGURATOR = "4401";
+    //***** END OF PYTHON AUTO INSTRUMENTATION *****
+}
+
+public class MsgDescription
+{
+    //***** START OF JAVA AUTO INSTRUMENTATION *****
+    public static string INITIALIZATION_SUCCESS = "Application Insights Java Auto-Instrumentation is successfully enabled and loaded for ikey {0}.";
+    public static string FREE_MEMORY_METRIC_ERROR = "FREE_MEMORY_METRIC_ERROR occured for ikey {0}.";
+    public static string CUSTOM_JMX_METRIC_ERROR = "CUSTOM_JMX_METRIC_ERROR  occured for ikey {0}.";
+    public static string STATUS_FILE_ERROR = "STATUS_FILE_ERROR  occured for ikey {0}.";
+    public static string STARTUP_FAILURE_ERROR = "STARTUP_FAILURE_ERROR occured for ikey {0}.";
+    public static string QUICK_PULSE_PING_ERROR = "QUICK_PULSE_PING_ERROR occured for ikey {0}.";
+    public static string QUICK_PULSE_SEND_ERROR = "QUICK_PULSE_SEND_ERROR occured for ikey {0}.";
+    public static string DISK_PERSISTENCE_LOADER_ERROR = "DISK_PERSISTENCE_LOADER_ERROR occured for ikey {0}.";
+    public static string DISK_PERSISTENCE_WRITER_ERROR = "DISK_PERSISTENCE_WRITER_ERROR occured for ikey {0}.";
+    public static string DISK_PERSISTENCE_PURGE_ERROR = "DISK_PERSISTENCE_PURGE_ERROR occured for ikey {0}.";
+    public static string INGESTION_ERROR = "INGESTION_ERROR occured for ikey {0}.";
+    public static string TELEMETRY_ITEM_EXPORTER_ERROR = "TELEMETRY_ITEM_EXPORTER_ERROR occured for ikey {0}.";
+    public static string TELEMETRY_TRUNCATION_ERROR = "TELEMETRY_TRUNCATION_ERROR occured for ikey {0}.";
+    public static string CPU_METRIC_ERROR = "CPU_METRIC_ERROR occured for ikey {0}.";
+    public static string HOSTNAME_ERROR = "HOSTNAME_ERROR occured for ikey {0}.";
+    public static string EXPORTER_MAPPING_ERROR = "EXPORTER_MAPPING_ERROR occured for ikey {0}.";
+    public static string BATCH_ITEM_PROCESSOR_ERROR = "BATCH_ITEM_PROCESSOR_ERROR occured for ikey {0}.";
+    public static string APP_ID_ERROR = "APP_ID_ERROR  occured for ikey {0}.";
+    public static string FRIENDLY_NETWORK_ERROR = "FRIENDLY_NETWORK_ERROR  occured for ikey {0}.";
+    public static string FAIL_TO_SEND_STATSBEAT_ERROR = "FAIL_TO_SEND_STATSBEAT_ERROR  occured for ikey {0}.";
+    //***** END OF JAVA AUTO INSTRUMENTATION *****
+    // ***** START OF NODE AUTO INSTRUMENTATION *****
+    public static string Success = "Application Insights Auto-Instrumentation{0} is successfully enabled and loaded for this webapp using the {1} collection level for a component with ikey {2}.";
+
+    public static string SdkExists = "Application Insights Auto-Instrumentation{0} is enabled for this web app. But instrumentation has backed-off as it found a reference of ApplicationInsights.dll at '{1}'. Please use <a href='https://docs.microsoft.com/azure/azure-monitor/app/azure-web-apps-net-core?tabs=Windows%2Cwindows#troubleshooting' target='_blank'>this article</a> to troubleshoot the issue for when your application refers to any Application Insights packages.";
+    //***** END OF NODE AUTO INSTRUMENTATION *****
+    //***** START OF PYTHON AUTO INSTRUMENTATION *****
+    public static string PYTHON_ATTACH_SUCCESS_DISTRO = "Azure Monitor OpenTelemetry Distro configured successfully for ikey {0}.";
+    public static string PYTHON_ATTACH_SUCCESS_CONFIGURATOR = "Azure Monitor OpenTelemetry Configurator configured successfully for ikey {0}.";
+    public static string PYTHON_ATTACH_FAILURE_DISTRO = "Azure Monitor OpenTelemetry Distro failed during configuration for ikey {0}";
+    public static string PYTHON_ATTACH_FAILURE_CONFIGURATOR = "Azure Monitor OpenTelemetry Configurator failed during configuration for ikey {0}";
+    //***** END OF PYTHON AUTO INSTRUMENTATION *****
+}
+
+class AttachStatus
+{
+    public string descriptionText { get; set; }
+    public int statusInsight { get; set; }
+    public string extensionTraceTableMarkdown { get; set; }
+}
