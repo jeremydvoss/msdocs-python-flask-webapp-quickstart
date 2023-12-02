@@ -1,8 +1,13 @@
 import logging
 import requests
 from os.path import exists, isdir
-from azure.monitor.opentelemetry import configure_azure_monitor
-import opentelemetry.instrumentation.auto_instrumentation.sitecustomize
+# from azure.monitor.opentelemetry import configure_azure_monitor
+# import opentelemetry.instrumentation.auto_instrumentation.sitecustomize
+from vm_resource_detector import AzureVMResourceDetector
+
+# Set up logger
+logger = logging.getLogger(__name__)
+logger.warning(AzureVMResourceDetector().detect())
 
 # configure_azure_monitor()
 
@@ -10,9 +15,6 @@ import opentelemetry.instrumentation.auto_instrumentation.sitecustomize
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 
 app = Flask(__name__)
-
-# Set up logger
-logger = logging.getLogger(__name__)
 
 
 @app.route('/')
@@ -115,8 +117,8 @@ def traces():
             requests.get(url_for(endpoint))
         except:
             pass
-    if exists('/agents/python'):
-        return "EXISTS"
+    # if exists('/agents/python'):
+    #     return "EXISTS"
     return 'Test app traces'
 
 # Metrics
@@ -133,13 +135,13 @@ def traces():
 
 if __name__ == '__main__':
     logger.info("JEREMY: run info")
-    if exists('/agents/python/'):
-        print("/agents/python EXISTS")
-    else:
-        print("/agents/python does not EXIST")
+    # if exists('/agents/python/'):
+    #     print("/agents/python EXISTS")
+    # else:
+    #     print("/agents/python does not EXIST")
     
-    if exists('~/workplace/'):
-        print("~/workplace EXISTS")
-    else:
-        print("~/workplace does not EXIST")
+    # if exists('~/workplace/'):
+    #     print("~/workplace EXISTS")
+    # else:
+    #     print("~/workplace does not EXIST")
     app.run()
