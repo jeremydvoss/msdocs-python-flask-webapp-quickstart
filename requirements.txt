@@ -1,2 +1,4 @@
 Flask==2.0.2
 # azure-monitor-opentelemetry-exporter/
+requests~=2.0
+Werkzeug~=2.2.2
