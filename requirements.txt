@@ -1,1 +1,5 @@
 Flask==2.0.2
+# Add to test manual instrumentation or backoff scenarios
+# azure-monitor-opentelemetry
+requests~=2.0
+Werkzeug~=2.2.2
